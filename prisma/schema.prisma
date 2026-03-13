@@ -1,0 +1,324 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum InventoryCategory {
+  CARRIER_OIL
+  ESSENTIAL_OIL
+  BUTTER
+  BOTANICAL
+  PACKAGING
+  CONSUMABLE
+  CLAY
+  SOAP_BASE
+  COLORANT
+  MOLD
+}
+
+enum OverheadPeriod {
+  WEEKLY
+  MONTHLY
+  ANNUAL
+}
+
+enum UnitType {
+  ML
+  G
+  EACH
+  DROPS_ONLY
+}
+
+enum Unit {
+  ML
+  G
+  EACH
+  DROPS
+}
+
+enum SourceType {
+  INVENTORY_ITEM
+  PREPARED_INGREDIENT
+}
+
+model InventoryItem {
+  id                   Int                 @id @default(autoincrement())
+  name                 String
+  category             InventoryCategory
+  unitType             UnitType
+  purchaseSize         Float
+  purchaseUnit         Unit
+  purchaseCostAud      Float
+  wastePercentDefault  Float?              // e.g. 2 means 2%
+  notes                String?
+
+  essentialOilSpec     EssentialOilSpec?
+  preparedInputs       PreparedIngredientInput[] @relation("PreparedInputInventory")
+  recipeLineItems      RecipeLineItem[]
+  packagingLineItems   PackagingLineItem[]
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model EssentialOilSpec {
+  id              Int           @id @default(autoincrement())
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId Int           @unique
+
+  dropsPerMl      Float         // e.g. 20
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model PreparedIngredient {
+  id           Int                        @id @default(autoincrement())
+  name         String
+  yieldAmount  Float
+  yieldUnit    Unit                      // ML or G usually
+
+  inputs       PreparedIngredientInput[] @relation("PreparedIngredient_Inputs")
+  usedAsInput  PreparedIngredientInput[] @relation("PreparedInputPrepared")
+  recipeLineItems RecipeLineItem[]
+
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+}
+
+model PreparedIngredientInput {
+  id                      Int                 @id @default(autoincrement())
+  preparedIngredient      PreparedIngredient  @relation("PreparedIngredient_Inputs", fields: [preparedIngredientId], references: [id])
+  preparedIngredientId    Int
+
+  sourceType              SourceType
+  sourceInventoryItemId   Int?                // when sourceType = INVENTORY_ITEM
+  sourcePreparedId        Int?                // when sourceType = PREPARED_INGREDIENT
+
+  sourceInventoryItem     InventoryItem?      @relation("PreparedInputInventory", fields: [sourceInventoryItemId], references: [id])
+  sourcePrepared          PreparedIngredient? @relation("PreparedInputPrepared", fields: [sourcePreparedId], references: [id])
+
+  quantity                Float
+  unit                    Unit
+  wastePercentOverride    Float?
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+model Recipe {
+  id          Int               @id @default(autoincrement())
+  name        String
+  batchSize   Float
+  batchUnit   Unit             // ML, G, or EACH
+  notes       String?
+
+  lineItems   RecipeLineItem[]
+  orderItems  OrderItem[]
+
+  packagingSet   PackagingSet? @relation(fields: [packagingSetId], references: [id])
+  packagingSetId Int?
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model RecipeLineItem {
+  id                   Int            @id @default(autoincrement())
+  recipe               Recipe         @relation(fields: [recipeId], references: [id])
+  recipeId             Int
+
+  sourceType           SourceType
+  sourceInventoryItemId Int?
+  sourcePreparedId     Int?
+
+  sourceInventoryItem  InventoryItem?      @relation(fields: [sourceInventoryItemId], references: [id])
+  sourcePrepared       PreparedIngredient? @relation(fields: [sourcePreparedId], references: [id])
+
+  quantity             Float
+  unit                 Unit
+  wastePercentOverride Float?
+
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model PackagingSet {
+  id                    Int                 @id @default(autoincrement())
+  name                  String
+  unitsPerBatchFormula  String?             // optional expression or description
+
+  lineItems             PackagingLineItem[]
+  recipes               Recipe[]
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
+model PackagingLineItem {
+  id                Int            @id @default(autoincrement())
+  packagingSet      PackagingSet   @relation(fields: [packagingSetId], references: [id])
+  packagingSetId    Int
+
+  inventoryItem     InventoryItem  @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId   Int
+
+  quantityPerUnit   Float
+  unit              Unit          // typically EACH
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model PricingProfile {
+  id                     Int      @id @default(autoincrement())
+  name                   String
+  laborRatePerHour       Float
+  laborMinutesPerBatch   Float
+  overheadPercent        Float
+  targetMarginPercent    Float
+  roundingRule           String?
+  estimatedUnitsPerMonth Float?   // used to dilute fixed overhead costs per unit
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model OverheadCost {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  amount    Float
+  period    OverheadPeriod
+  notes     String?
+  active    Boolean        @default(true)
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIALLY_PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  STRIPE
+  PAYPAL
+  OTHER
+}
+
+model Client {
+  id            Int       @id @default(autoincrement())
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  postcode      String?
+  country       String?   @default("Australia")
+  notes         String?
+  
+  orders        Order[]
+  invoices      Invoice[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  orderNumber     String      @unique
+  client          Client      @relation(fields: [clientId], references: [id])
+  clientId        Int
+  
+  orderDate       DateTime    @default(now())
+  dueDate         DateTime?
+  status          String      @default("pending")
+  notes           String?
+  
+  items           OrderItem[]
+  invoice         Invoice?
+  
+  subtotal        Float       @default(0)
+  tax             Float       @default(0)
+  total           Float       @default(0)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id              Int      @id @default(autoincrement())
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         Int
+  
+  recipe          Recipe?  @relation(fields: [recipeId], references: [id])
+  recipeId        Int?
+  
+  productName     String
+  description     String?
+  quantity        Int
+  unitPrice       Float
+  total           Float
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  invoiceNumber   String        @unique
+  client          Client        @relation(fields: [clientId], references: [id])
+  clientId        Int
+  
+  order           Order?        @relation(fields: [orderId], references: [id])
+  orderId         Int?          @unique
+  
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  subtotal        Float
+  tax             Float         @default(0)
+  total           Float
+  amountPaid      Float         @default(0)
+  amountDue       Float
+  
+  notes           String?
+  terms           String?
+  
+  payments        Payment[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId       Int
+  
+  amount          Float
+  paymentDate     DateTime      @default(now())
+  paymentMethod   PaymentMethod
+  reference       String?
+  notes           String?
+  
+  stripePaymentId String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
