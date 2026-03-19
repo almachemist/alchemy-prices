@@ -1,11 +1,13 @@
 import { prisma } from "../../lib/prisma";
 import { redirect } from "next/navigation";
+import { OrderSelector } from "./OrderSelector";
 
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: { orderId?: string };
+  searchParams: Promise<{ orderId?: string }>;
 }) {
+  const params = await searchParams;
   const clients = await prisma.client.findMany({
     orderBy: { name: "asc" },
   });
@@ -21,8 +23,8 @@ export default async function NewInvoicePage({
     orderBy: { orderDate: "desc" },
   });
 
-  const selectedOrder = searchParams.orderId
-    ? orders.find((o) => o.id === parseInt(searchParams.orderId!))
+  const selectedOrder = params.orderId
+    ? orders.find((o) => o.id === parseInt(params.orderId!))
     : null;
 
   async function createInvoice(formData: FormData) {
@@ -84,33 +86,7 @@ export default async function NewInvoicePage({
 
       <form action={createInvoice} className="card max-w-2xl">
         <div className="space-y-5">
-          <div>
-            <label htmlFor="orderId" className="block text-sm font-medium mb-1.5">
-              Order
-            </label>
-            <select
-              id="orderId"
-              name="orderId"
-              className="select"
-              defaultValue={searchParams.orderId || ""}
-              onChange={(e) => {
-                const orderId = e.currentTarget.value;
-                if (orderId) {
-                  window.location.href = `/invoices/new?orderId=${orderId}`;
-                }
-              }}
-            >
-              <option value="">Select an order (optional)</option>
-              {orders.map((order) => (
-                <option key={order.id} value={order.id}>
-                  {order.orderNumber} - {order.client.name} (AU${order.total.toFixed(2)})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Only showing orders without invoices
-            </p>
-          </div>
+          <OrderSelector orders={orders} defaultValue={params.orderId} />
 
           <div>
             <label htmlFor="clientId" className="block text-sm font-medium mb-1.5">

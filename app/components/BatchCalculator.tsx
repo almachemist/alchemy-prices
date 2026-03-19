@@ -31,6 +31,8 @@ export function BatchCalculator({
   const [selectedId, setSelectedId] = useState<number | "">(recipes[0]?.id ?? "");
   const [multiplier, setMultiplier] = useState(1);
   const [customUnitSize, setCustomUnitSize] = useState("");
+  const [wholesaleMargin, setWholesaleMargin] = useState(50);
+  const [retailMargin, setRetailMargin] = useState(65);
 
   const recipe = recipes.find((r) => r.id === selectedId);
 
@@ -46,6 +48,10 @@ export function BatchCalculator({
   const unitsProduced = unitSize > 0 ? Math.floor(scaledBatchSize / unitSize) : 0;
   const ingredientPerUnit = unitsProduced > 0 ? scaledBatchCost / unitsProduced : 0;
   const totalPerUnit = ingredientPerUnit + ohPerUnit;
+  const wholesalePrice = wholesaleMargin < 100 ? totalPerUnit / (1 - wholesaleMargin / 100) : 0;
+  const retailPrice = retailMargin < 100 ? totalPerUnit / (1 - retailMargin / 100) : 0;
+  const wholesaleProfit = wholesalePrice - totalPerUnit;
+  const retailProfit = retailPrice - totalPerUnit;
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -126,6 +132,36 @@ export function BatchCalculator({
                 step="any"
               />
             </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                Wholesale Margin %
+              </label>
+              <input
+                type="number"
+                className="input"
+                value={wholesaleMargin}
+                onChange={(e) => setWholesaleMargin(Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
+                min={0}
+                max={99}
+                step={5}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                Retail Margin %
+              </label>
+              <input
+                type="number"
+                className="input"
+                value={retailMargin}
+                onChange={(e) => setRetailMargin(Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
+                min={0}
+                max={99}
+                step={5}
+              />
+            </div>
           </div>
         </div>
 
@@ -171,6 +207,49 @@ export function BatchCalculator({
                 </span>
               </div>
             </div>
+
+            {/* Pricing tiers */}
+            {unitsProduced > 0 && (
+              <div className="space-y-3 border-t pt-3" style={{ borderColor: "var(--color-border-light)" }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>
+                  Suggested Pricing
+                </h4>
+
+                <div className="rounded-lg p-3" style={{ background: "var(--color-bg-subtle)" }}>
+                  <div className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>
+                    Wholesale ({wholesaleMargin}% margin)
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-lg font-bold" style={{ color: "var(--color-gold)" }}>
+                      AU${wholesalePrice.toFixed(2)}
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      profit AU${wholesaleProfit.toFixed(2)}/unit
+                    </span>
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                    Batch revenue: AU${(wholesalePrice * unitsProduced).toFixed(2)} | Batch profit: AU${(wholesaleProfit * unitsProduced).toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="rounded-lg p-3" style={{ background: "var(--color-bg-subtle)" }}>
+                  <div className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>
+                    Retail ({retailMargin}% margin)
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-lg font-bold" style={{ color: "var(--color-accent)" }}>
+                      AU${retailPrice.toFixed(2)}
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      profit AU${retailProfit.toFixed(2)}/unit
+                    </span>
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                    Batch revenue: AU${(retailPrice * unitsProduced).toFixed(2)} | Batch profit: AU${(retailProfit * unitsProduced).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -190,38 +269,52 @@ export function BatchCalculator({
                     <th className="py-2 px-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Base Qty</th>
                     <th className="py-2 px-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scaled Qty</th>
                     <th className="py-2 px-3 text-left text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Unit</th>
+                    <th className="py-2 px-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>$/unit</th>
                     <th className="py-2 px-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Base Cost</th>
-                    <th className="py-2 pl-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scaled Cost</th>
+                    <th className="py-2 px-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scaled Cost</th>
+                    <th className="py-2 pl-3 text-right text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>% of Cost</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recipe.lineItems.map((li) => (
-                    <tr key={li.id} className="table-row border-b" style={{ borderColor: "var(--color-border-light)" }}>
-                      <td className="py-2.5 pr-4 font-medium">{li.inventoryItemName}</td>
-                      <td className="py-2.5 px-3 text-right" style={{ color: "var(--color-text-muted)" }}>
-                        {li.quantity}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-semibold">
-                        {(li.quantity * multiplier).toFixed(2)}
-                      </td>
-                      <td className="py-2.5 px-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                        {li.unit}
-                      </td>
-                      <td className="py-2.5 px-3 text-right" style={{ color: "var(--color-text-muted)" }}>
-                        AU${li.cost.toFixed(4)}
-                      </td>
-                      <td className="py-2.5 pl-3 text-right font-semibold" style={{ color: "var(--color-gold)" }}>
-                        AU${(li.cost * multiplier).toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
+                  {recipe.lineItems.map((li) => {
+                    const pct = recipe.batchCost > 0 ? (li.cost / recipe.batchCost) * 100 : 0;
+                    return (
+                      <tr key={li.id} className="table-row border-b" style={{ borderColor: "var(--color-border-light)" }}>
+                        <td className="py-2.5 pr-4 font-medium">{li.inventoryItemName}</td>
+                        <td className="py-2.5 px-3 text-right" style={{ color: "var(--color-text-muted)" }}>
+                          {li.quantity}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-semibold">
+                          {(li.quantity * multiplier).toFixed(2)}
+                        </td>
+                        <td className="py-2.5 px-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                          {li.unit}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-xs" style={{ color: "var(--color-text-muted)" }}>
+                          ${li.unitPrice.toFixed(4)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right" style={{ color: "var(--color-text-muted)" }}>
+                          AU${li.cost.toFixed(4)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-semibold" style={{ color: "var(--color-gold)" }}>
+                          AU${(li.cost * multiplier).toFixed(4)}
+                        </td>
+                        <td className="py-2.5 pl-3 text-right text-xs font-medium" style={{
+                          color: pct > 30 ? "var(--color-danger)" : pct > 15 ? "var(--color-gold)" : "var(--color-text-muted)"
+                        }}>
+                          {pct.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2" style={{ borderColor: "var(--color-border)" }}>
-                    <td colSpan={5} className="py-3 pr-3 text-right font-semibold">Total</td>
-                    <td className="py-3 pl-3 text-right text-base font-bold" style={{ color: "var(--color-accent)" }}>
+                    <td colSpan={6} className="py-3 pr-3 text-right font-semibold">Total</td>
+                    <td className="py-3 px-3 text-right text-base font-bold" style={{ color: "var(--color-accent)" }}>
                       AU${scaledBatchCost.toFixed(2)}
                     </td>
+                    <td className="py-3 pl-3 text-right text-xs font-bold">100%</td>
                   </tr>
                 </tfoot>
               </table>

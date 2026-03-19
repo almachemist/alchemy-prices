@@ -4,10 +4,11 @@ import Link from "next/link";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: { clientId?: string };
+  searchParams: Promise<{ clientId?: string }>;
 }) {
-  const whereClause = searchParams.clientId
-    ? { clientId: parseInt(searchParams.clientId) }
+  const params = await searchParams;
+  const whereClause = params.clientId
+    ? { clientId: parseInt(params.clientId) }
     : {};
 
   const invoices = await prisma.invoice.findMany({

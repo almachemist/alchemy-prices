@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const text = await extractText(buffer);
+    const text = await extractTextFromPdf(buffer);
 
     return NextResponse.json({ text, success: true });
   } catch (error) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function extractText(buffer: Buffer): Promise<string> {
+async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   const pdfParser = new (PDFParser as any)(null, 1);
   return new Promise<string>((resolve, reject) => {
     pdfParser.on('pdfParser_dataError', (errData: any) => reject(new Error(errData.parserError)));

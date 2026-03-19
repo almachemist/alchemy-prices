@@ -20,7 +20,13 @@ export async function POST(req: Request) {
       purchaseUnit: body.purchaseUnit,
       purchaseCostAud: body.purchaseCostAud,
       notes: body.notes ?? null,
+      ...(body.dropsPerMl && {
+        essentialOilSpec: {
+          create: { dropsPerMl: body.dropsPerMl },
+        },
+      }),
     },
+    include: { essentialOilSpec: true },
   });
   return NextResponse.json(item, { status: 201 });
 }
