@@ -62,8 +62,16 @@ export function unitCostFromBatch(params: {
   batchCost: number;
   batchSize: number;
   unitSize: number;
+  outputUnits?: number | null; // explicit yield overrides batchSize/unitSize
 }): { unitsProduced: number; unitCost: number } {
-  const { batchCost, batchSize, unitSize } = params;
+  const { batchCost, batchSize, unitSize, outputUnits } = params;
+
+  // If the recipe declares its output count directly, use that
+  if (outputUnits && outputUnits > 0) {
+    const unitCost = batchCost / outputUnits;
+    return { unitsProduced: outputUnits, unitCost };
+  }
+
   if (batchSize <= 0 || unitSize <= 0) {
     return { unitsProduced: 0, unitCost: 0 };
   }

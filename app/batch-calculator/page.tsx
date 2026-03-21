@@ -38,6 +38,7 @@ export default async function BatchCalculatorPage() {
       name: r.name,
       batchSize: r.batchSize,
       batchUnit: r.batchUnit,
+      outputUnits: r.outputUnits,
       notes: r.notes,
       batchCost,
       lineItems: r.lineItems.map((li) => ({

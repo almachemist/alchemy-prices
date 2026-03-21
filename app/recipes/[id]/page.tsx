@@ -46,6 +46,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
     batchCost,
     batchSize: recipe.batchSize,
     unitSize,
+    outputUnits: recipe.outputUnits,
   });
   const totalPerUnit = unitsProduced ? unitCost + ohPerUnit : 0;
 

@@ -16,6 +16,7 @@ type Recipe = {
   name: string;
   batchSize: number;
   batchUnit: string;
+  outputUnits: number | null;
   notes: string | null;
   batchCost: number;
   lineItems: LineItem[];
@@ -45,7 +46,9 @@ export function BatchCalculator({
 
   const scaledBatchSize = recipe ? recipe.batchSize * multiplier : 0;
   const scaledBatchCost = recipe ? recipe.batchCost * multiplier : 0;
-  const unitsProduced = unitSize > 0 ? Math.floor(scaledBatchSize / unitSize) : 0;
+  const unitsProduced = recipe?.outputUnits
+    ? recipe.outputUnits * multiplier
+    : unitSize > 0 ? Math.floor(scaledBatchSize / unitSize) : 0;
   const ingredientPerUnit = unitsProduced > 0 ? scaledBatchCost / unitsProduced : 0;
   const totalPerUnit = ingredientPerUnit + ohPerUnit;
   const wholesalePrice = wholesaleMargin < 100 ? totalPerUnit / (1 - wholesaleMargin / 100) : 0;

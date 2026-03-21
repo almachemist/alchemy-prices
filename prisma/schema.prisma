@@ -118,6 +118,7 @@ model Recipe {
   name        String
   batchSize   Float
   batchUnit   Unit             // ML, G, or EACH
+  outputUnits Int?             // explicit unit count produced per batch (overrides batchSize/unitSize calc)
   notes       String?
 
   lineItems   RecipeLineItem[]
