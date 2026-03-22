@@ -11,6 +11,13 @@ type OverheadCost = {
   active: number | boolean;
 };
 
+type NewOverheadForm = {
+  name: string;
+  amount: string;
+  period: string;
+  notes: string;
+};
+
 export function OverheadEditor({
   overheadCosts,
   profileId,
@@ -23,6 +30,14 @@ export function OverheadEditor({
   const [units, setUnits] = useState(estimatedUnitsPerMonth?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newOverhead, setNewOverhead] = useState<NewOverheadForm>({
+    name: "",
+    amount: "",
+    period: "MONTHLY",
+    notes: "",
+  });
+  const [addingNew, setAddingNew] = useState(false);
 
   const handleSaveUnits = async () => {
     setSaving(true);
@@ -54,6 +69,73 @@ export function OverheadEditor({
   };
 
   const hasChanges = units !== (estimatedUnitsPerMonth?.toString() ?? "");
+
+  const handleAddNew = async () => {
+    if (!newOverhead.name || !newOverhead.amount) {
+      alert("Name and amount are required");
+      return;
+    }
+
+    setAddingNew(true);
+    try {
+      const response = await fetch("/api/overhead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newOverhead),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add overhead cost");
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert("Error adding overhead cost");
+    } finally {
+      setAddingNew(false);
+    }
+  };
+
+  const handleToggleActive = async (id: number, currentActive: boolean) => {
+    try {
+      const response = await fetch(`/api/overhead/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !currentActive }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle overhead cost");
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert("Error toggling overhead cost");
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/overhead/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete overhead cost");
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert("Error deleting overhead cost");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -134,6 +216,7 @@ export function OverheadEditor({
                 <th className="text-center p-3">Period</th>
                 <th className="text-right p-3">Monthly</th>
                 <th className="text-center p-3">Active</th>
+                <th className="text-center p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -179,6 +262,32 @@ export function OverheadEditor({
                         <span style={{ color: "#ef4444" }}>✗</span>
                       )}
                     </td>
+                    <td className="text-center p-3">
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleToggleActive(cost.id, Boolean(cost.active))}
+                          className="px-2 py-1 rounded text-xs hover:opacity-80"
+                          style={{
+                            backgroundColor: cost.active ? "#fef3c7" : "#d1fae5",
+                            color: cost.active ? "#92400e" : "#065f46",
+                          }}
+                          title={cost.active ? "Deactivate" : "Activate"}
+                        >
+                          {cost.active ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(cost.id, cost.name)}
+                          className="px-2 py-1 rounded text-xs hover:opacity-80"
+                          style={{
+                            backgroundColor: "#fee2e2",
+                            color: "#991b1b",
+                          }}
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -187,10 +296,91 @@ export function OverheadEditor({
         </div>
 
         <div className="p-4 border-t" style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-subtle)" }}>
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            To add, edit, or deactivate overhead costs, update the <code>OverheadCost</code> table directly in the database.
-          </p>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="px-4 py-2 rounded-md font-medium"
+            style={{
+              backgroundColor: "var(--color-accent)",
+              color: "white",
+            }}
+          >
+            {showAddForm ? "Cancel" : "+ Add New Overhead Cost"}
+          </button>
         </div>
+
+        {showAddForm && (
+          <div className="p-6 border-t" style={{ borderColor: "var(--color-border)", backgroundColor: "#f0fdf4" }}>
+            <h3 className="font-semibold mb-4">Add New Overhead Cost</h3>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newOverhead.name}
+                  onChange={(e) => setNewOverhead({ ...newOverhead, name: e.target.value })}
+                  placeholder="e.g., Insurance, Taxes, Website"
+                  className="w-full rounded-md border px-3 py-2"
+                  style={{ borderColor: "var(--color-border)" }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Amount (AU$) *</label>
+                <input
+                  type="number"
+                  value={newOverhead.amount}
+                  onChange={(e) => setNewOverhead({ ...newOverhead, amount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full rounded-md border px-3 py-2"
+                  style={{ borderColor: "var(--color-border)" }}
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Period *</label>
+                <select
+                  value={newOverhead.period}
+                  onChange={(e) => setNewOverhead({ ...newOverhead, period: e.target.value })}
+                  className="w-full rounded-md border px-3 py-2"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="ANNUAL">Annual</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Notes (optional)</label>
+                <input
+                  type="text"
+                  value={newOverhead.notes}
+                  onChange={(e) => setNewOverhead({ ...newOverhead, notes: e.target.value })}
+                  placeholder="Additional details"
+                  className="w-full rounded-md border px-3 py-2"
+                  style={{ borderColor: "var(--color-border)" }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <button
+                onClick={handleAddNew}
+                disabled={addingNew || !newOverhead.name || !newOverhead.amount}
+                className="px-4 py-2 rounded-md font-medium disabled:opacity-50"
+                style={{
+                  backgroundColor: newOverhead.name && newOverhead.amount ? "#10b981" : "var(--color-border)",
+                  color: newOverhead.name && newOverhead.amount ? "white" : "var(--color-text-muted)",
+                }}
+              >
+                {addingNew ? "Adding..." : "Add Overhead Cost"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Recommendations */}

@@ -20,3 +20,35 @@ export async function GET() {
     perUnit: overheadPerUnit(overheadRows, estimatedUnitsPerMonth),
   });
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { name, amount, period, notes } = body;
+
+    if (!name || !amount || !period) {
+      return NextResponse.json(
+        { error: "Name, amount, and period are required" },
+        { status: 400 }
+      );
+    }
+
+    const result = await prisma.overheadCost.create({
+      data: {
+        name,
+        amount: parseFloat(amount),
+        period,
+        notes: notes || null,
+        active: true,
+      },
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("POST /api/overhead error:", error);
+    return NextResponse.json(
+      { error: "Failed to create overhead cost", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
