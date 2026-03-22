@@ -19,20 +19,29 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const body = await req.json();
-  const recipe = await prisma.recipe.update({
-    where: { id: Number(id) },
-    data: {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.batchSize !== undefined && { batchSize: body.batchSize }),
-      ...(body.batchUnit !== undefined && { batchUnit: body.batchUnit }),
-      ...(body.notes !== undefined && { notes: body.notes }),
-      ...(body.outputUnits !== undefined && { outputUnits: body.outputUnits }),
-      ...(body.unitWeightG !== undefined && { unitWeightG: body.unitWeightG }),
-    },
-  });
-  return NextResponse.json(recipe);
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    
+    const recipe = await prisma.recipe.update({
+      where: { id: Number(id) },
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.batchSize !== undefined && { batchSize: body.batchSize }),
+        ...(body.batchUnit !== undefined && { batchUnit: body.batchUnit }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        ...(body.outputUnits !== undefined && { outputUnits: body.outputUnits }),
+        ...(body.unitWeightG !== undefined && { unitWeightG: body.unitWeightG }),
+      },
+    });
+    return NextResponse.json(recipe);
+  } catch (error) {
+    console.error("PATCH /api/recipes/[id] error:", error);
+    return NextResponse.json(
+      { error: "Failed to update recipe", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

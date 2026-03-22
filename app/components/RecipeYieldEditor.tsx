@@ -35,7 +35,10 @@ export function RecipeYieldEditor({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update recipe");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.details || errorData.error || "Failed to update recipe";
+        console.error("API error:", errorData);
+        throw new Error(errorMsg);
       }
 
       setMessage("✓ Saved");
@@ -43,8 +46,8 @@ export function RecipeYieldEditor({
         window.location.reload();
       }, 500);
     } catch (error) {
-      console.error(error);
-      setMessage("Error saving");
+      console.error("Save error:", error);
+      setMessage(error instanceof Error ? `Error: ${error.message}` : "Error saving");
     } finally {
       setSaving(false);
     }
