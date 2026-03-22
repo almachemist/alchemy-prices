@@ -28,6 +28,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ...(body.batchSize !== undefined && { batchSize: body.batchSize }),
       ...(body.batchUnit !== undefined && { batchUnit: body.batchUnit }),
       ...(body.notes !== undefined && { notes: body.notes }),
+      ...(body.outputUnits !== undefined && { outputUnits: body.outputUnits }),
+      ...(body.unitWeightG !== undefined && { unitWeightG: body.unitWeightG }),
     },
   });
   return NextResponse.json(recipe);

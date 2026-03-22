@@ -11,6 +11,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecipeLineItemEditor } from "../../components/RecipeLineItemEditor";
 import { RecipeHeader } from "../../components/RecipeHeader";
+import { RecipeYieldEditor } from "../../components/RecipeYieldEditor";
 
 export default async function RecipeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -91,6 +92,14 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         notes={recipe.notes}
         batchSize={recipe.batchSize}
         batchUnit={recipe.batchUnit}
+      />
+
+      {/* Yield Editor */}
+      <RecipeYieldEditor
+        recipeId={recipe.id}
+        initialOutputUnits={recipe.outputUnits}
+        initialUnitWeightG={recipe.unitWeightG}
+        batchSize={recipe.batchSize}
       />
 
       {/* Cost summary cards */}

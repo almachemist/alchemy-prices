@@ -119,6 +119,7 @@ model Recipe {
   batchSize   Float
   batchUnit   Unit             // ML, G, or EACH
   outputUnits Int?             // explicit unit count produced per batch (overrides batchSize/unitSize calc)
+  unitWeightG Float?           // weight of a single unit in grams (for cost calculation when using different molds)
   notes       String?
 
   lineItems   RecipeLineItem[]
