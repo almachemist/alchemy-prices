@@ -11,6 +11,7 @@ const links = [
   { href: "/orders", label: "Orders" },
   { href: "/invoices", label: "Invoices" },
   { href: "/batch-calculator", label: "Calculator" },
+  { href: "/pricing-simulator", label: "Pricing" },
 ];
 
 export function NavLinks() {
